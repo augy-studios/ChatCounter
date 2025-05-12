@@ -58,6 +58,19 @@ class General(commands.Cog):
         await interaction.response.send_message(f"Pong! 🏓 Latency: {latency}ms")
         await log_action(self.bot, interaction)
 
+    @app_commands.command(name="hello", description="Learn more about the bot.")
+    async def hello(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="Hello!", color=discord.Color.random())
+        link_to_add_bot = f"https://discord.com/oauth2/authorize?client_id={self.bot.user.id}"
+        embed.add_field(name="Add Me to Your Server", value=f"[Click here!]({link_to_add_bot})")
+        link_to_hello = "https://augystudios.com/"
+        embed.add_field(name="About Augy Studios", value=f"[Learn more about Augy Studios!]({link_to_hello})")
+        link_to_docs = "https://chatcounter.augystudios.com/"
+        embed.add_field(name="How to Use", value=f"[View the documentation!]({link_to_docs})")
+        embed.set_footer(text="Made with ❤️ by Augy Studios © 2025 All Rights Sniffed • https://augystudios.com/")
+        await interaction.response.send_message(embed=embed)
+        await log_action(self.bot, interaction)
+
     @app_commands.command(name="help", description="Display a list of available commands categorized by their category.")
     @app_commands.describe(category="Choose a category to see its commands")
     async def help_command(self, interaction: discord.Interaction, category: str | None = None):
