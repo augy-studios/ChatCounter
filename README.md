@@ -1,5 +1,5 @@
 # Chat Counter Discord Bot
-Chat Counter is a Python rewrite of [WordCount](https://github.com/billsboard/WordCount) written in Java by [billsboard](https://github.com/billsboard), but with my own twist to it.
+Chat Counter is a Python rewrite of [WordCount](https://github.com/billsboard/WordCount) written in Java by [billsboard](https://github.com/billsboard), but with a twist to it.
 
 ---
 
