@@ -63,7 +63,7 @@ with open(SESSION_FILE, "a", newline="", encoding="utf-8") as f:
 async def update_activity():
     # set a custom status with an emoji
     await bot.change_presence(
-        activity=discord.CustomActivity(name=f"Hello, GFTV! (Session ID: {session_id})", emoji=":wave:")
+        activity=discord.CustomActivity(name=f"Hello, chat! (Session ID: {session_id})", emoji=":wave:")
     )
 
 # ----- Load extensions, events, etc. -----

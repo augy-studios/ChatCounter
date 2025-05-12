@@ -65,7 +65,7 @@ class General(commands.Cog):
             title="Help - Available Commands",
             color=discord.Color.random()
         )
-        base_embed.set_footer(text="Made with ❤️ by GFTV Intl © 2025 All Rights Sniffed • https://globalfurry.tv/")
+        base_embed.set_footer(text="Made with ❤️ by Augy Studios © 2025 All Rights Sniffed • https://augystudios.com/")
 
         # Collect commands grouped by Cog
         cog_commands: dict[str, list[str]] = {}
