@@ -2,6 +2,7 @@ import os
 import csv
 import string
 import datetime
+from zoneinfo import ZoneInfo
 import random
 
 import discord
@@ -84,15 +85,15 @@ async def leaderboard(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🏆 Global Message Leaderboard",
         description="Top 10 users by message count",
-        color=discord.Color.blurple(),
-        timestamp=datetime.datetime.utcnow()
+        color=discord.Color.random(),
+        timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
     )
     for rank, (uid, tot) in enumerate(top, start=1):
         member = bot.get_user(int(uid))
-        name = member.mention if member else f"<@{uid}>"
+        name = member.name if member else f"Unknown User ({uid})"
         embed.add_field(
             name=f"{rank}. {name}",
-            value=f"{tot['messages']} messages\n{tot['words']} words\n{tot['characters']} characters",
+            value=f"{tot['messages']} messages | {tot['words']} words | {tot['characters']} characters",
             inline=False
         )
     await interaction.response.send_message(embed=embed)
