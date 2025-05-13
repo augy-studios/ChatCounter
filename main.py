@@ -66,38 +66,6 @@ intents.guilds = True
 intents.members = True
 bot = commands.AutoShardedBot(command_prefix="!", intents=intents)
 
-# ----- Slash command: leaderboard -----
-@bot.tree.command(name="leaderboard", description="Show the global message leaderboard")
-async def leaderboard(interaction: discord.Interaction):
-    if not stats:
-        return await interaction.response.send_message("No message data yet.")
-
-    # Aggregate totals per user
-    user_totals = {}
-    for (uid, _), rec in stats.items():
-        totals = user_totals.setdefault(uid, {"messages": 0, "words": 0, "characters": 0})
-        totals["messages"] += rec["messages"]
-        totals["words"] += rec["words"]
-        totals["characters"] += rec["characters"]
-
-    top = sorted(user_totals.items(), key=lambda kv: kv[1]["messages"], reverse=True)[:10]
-
-    embed = discord.Embed(
-        title="🏆 Global Message Leaderboard",
-        description="Top 10 users by message count",
-        color=discord.Color.random(),
-        timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
-    )
-    for rank, (uid, tot) in enumerate(top, start=1):
-        member = bot.get_user(int(uid))
-        name = member.name if member else f"Unknown User ({uid})"
-        embed.add_field(
-            name=f"{rank}. {name}",
-            value=f"{tot['messages']} messages | {tot['words']} words | {tot['characters']} characters",
-            inline=False
-        )
-    await interaction.response.send_message(embed=embed)
-
 # ----- Event: track every user message -----
 @bot.event
 async def on_message(message: discord.Message):
