@@ -4,38 +4,51 @@ import string
 import datetime
 from zoneinfo import ZoneInfo
 import random
+import asyncio
 
 import discord
 from discord.ext import commands
 
 from core.logger import setup_error_handling
-from config import DISCORD_TOKEN, LOG_GUILD_ID
+from config import DISCORD_TOKEN, LOG_GUILD_ID, DISCORD_CLIENT_ID
 from user_utils import update_known_users
+from shared import stats, max_id, words_stats, max_word_id
 
-# ----- Database (CSV) setup -----
-DB_DIR = "db"
-DB_FILE = os.path.join(DB_DIR, "counter.csv")
+# ----- Directory setup -----
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, 'db')
 os.makedirs(DB_DIR, exist_ok=True)
 
-# In-memory stats keyed by (user_id, guild_id)
-stats = {}
-max_id = 0
+# ----- English words loader -----
+# Load the `american-english` word list from the db directory into a set for O(1) lookups
+AMERICAN_ENGLISH_FILE = os.path.join(DB_DIR, 'american-english')
+if os.path.exists(AMERICAN_ENGLISH_FILE):
+    with open(AMERICAN_ENGLISH_FILE, encoding='utf-8') as f:
+        ENGLISH_WORDS = set(line.strip().lower() for line in f if line.strip())
+    print(f"Loaded {len(ENGLISH_WORDS)} English words from '{AMERICAN_ENGLISH_FILE}'")
+else:
+    ENGLISH_WORDS = set()
+    print(f"Warning: English word list file '{AMERICAN_ENGLISH_FILE}' not found. ENGLISH_WORDS is empty.")
 
-# Load existing data or initialize file
-if not os.path.exists(DB_FILE):
-    with open(DB_FILE, "w", newline="", encoding="utf-8") as f:
+# ----- Stats CSV setup -----
+COUNTER_FILE = os.path.join(DB_DIR, 'counter.csv')
+WORDS_FILE = os.path.join(DB_DIR, 'words.csv')
+
+# Initialize or load counter.csv
+if not os.path.exists(COUNTER_FILE):
+    with open(COUNTER_FILE, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(["id", "entry_id", "user_id", "guild_id", "messages", "words", "characters"])
 else:
-    with open(DB_FILE, newline="", encoding="utf-8") as f:
+    with open(COUNTER_FILE, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
-                record_id = int(row["id"])
+                rid = int(row['id'])
                 uid = row["user_id"]
                 gid = row["guild_id"]
                 stats[(uid, gid)] = {
-                    "id": record_id,
+                    "id": rid,
                     "entry_id": row["entry_id"],
                     "user_id": uid,
                     "guild_id": gid,
@@ -43,30 +56,82 @@ else:
                     "words": int(row["words"]),
                     "characters": int(row["characters"]),
                 }
-                if record_id > max_id:
-                    max_id = record_id
+                max_id = max(max_id, rid)
+            except (KeyError, ValueError):
+                continue
+
+# Initialize or load words.csv
+if not os.path.exists(WORDS_FILE):
+    with open(WORDS_FILE, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['id', 'word_id', 'guild_id', 'word', 'count', 'is_dict'])
+else:
+    with open(WORDS_FILE, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                wid = int(row['id'])
+                gid = row['guild_id']
+                word = row['word']
+                count = int(row['count'])
+                is_dict = row['is_dict'] in ('True', 'true', '1')
+                word_id = row['word_id']
+                words_stats[(gid, word)] = {
+                    'id': wid,
+                    'word_id': word_id,
+                    'guild_id': gid,
+                    'word': word,
+                    'count': count,
+                    'is_dict': is_dict,
+                }
+                max_word_id = max(max_word_id, wid)
             except (KeyError, ValueError):
                 continue
 
 # Persist stats to CSV
 def save_stats():
-    with open(DB_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=["id", "entry_id", "user_id", "guild_id", "messages", "words", "characters"]
-        )
+    with open(COUNTER_FILE, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['id','entry_id','user_id','guild_id','messages','words','characters'])
         writer.writeheader()
         for rec in stats.values():
             writer.writerow(rec)
+
+# Persist word stats to CSV
+def save_words():
+    with open(WORDS_FILE, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['id','word_id','guild_id','word','count','is_dict'])
+        writer.writeheader()
+        for rec in words_stats.values():
+            writer.writerow({
+                'id': rec['id'],
+                'word_id': rec['word_id'],
+                'guild_id': rec['guild_id'],
+                'word': rec['word'],
+                'count': rec['count'],
+                'is_dict': rec['is_dict'],
+            })
+
+# Generate a unique 8-char word_id
+def generate_word_id():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 # ----- Bot setup -----
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
-bot = commands.AutoShardedBot(command_prefix="!", intents=intents)
+bot = commands.AutoShardedBot(
+    command_prefix="!",
+    intents=intents,
+    application_id=int(DISCORD_CLIENT_ID)
+)
 
-# ----- Event: track every user message -----
+# Clean a token: strip leading punctuation/symbols and lower
+def clean_token(token: str) -> str:
+    # Remove leading and trailing punctuation/symbols and convert to lowercase
+    return token.strip(string.punctuation + '“”‘’').lower()
+
+# ----- Event: track every user message and words -----
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot or message.guild is None:
@@ -76,27 +141,46 @@ async def on_message(message: discord.Message):
     gid = str(message.guild.id)
     key = (uid, gid)
 
-    global max_id
+    global max_id, max_word_id
+    # Update message stats
     if key not in stats:
         max_id += 1
-        entry_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-        stats[key] = {
-            "id": max_id,
-            "entry_id": entry_id,
-            "user_id": uid,
-            "guild_id": gid,
-            "messages": 0,
-            "words": 0,
-            "characters": 0,
-        }
+        entry_id = generate_word_id()
+        stats[key] = {'id': max_id, 'entry_id': entry_id, 'user_id': uid, 'guild_id': gid, 'messages':0,'words':0,'characters':0}
 
     rec = stats[key]
     rec["messages"] += 1
     content = message.content or ""
-    rec["words"] += len(content.split())
+    tokens = content.split()
+    rec['words'] += len(tokens)
     rec["characters"] += len(content)
 
     save_stats()
+
+    # Track each word
+    for token in tokens:
+        w = clean_token(token)
+        if not w:
+            continue
+        wkey = (gid, w)
+        if wkey not in words_stats:
+            max_word_id += 1
+            wid = max_word_id
+            word_id = generate_word_id()
+            is_dict = w in ENGLISH_WORDS
+            words_stats[wkey] = {
+                'id': wid,
+                'word_id': word_id,
+                'guild_id': gid,
+                'word': w,
+                'count': 1,
+                'is_dict': is_dict,
+            }
+        else:
+            words_stats[wkey]['count'] += 1
+        # no need to update other fields
+    save_words()
+
     await bot.process_commands(message)
 
 # ----- Session-ID generation & logging -----
@@ -150,6 +234,7 @@ async def load_cogs():
         "bot.commands.general",
         "bot.commands.info",
         "bot.commands.admin",
+        "bot.commands.stats",
     ]
     for ext in extensions:
         if ext not in bot.extensions:
@@ -197,5 +282,14 @@ async def on_guild_remove(guild):
     await update_activity()
 
 # ----- Error handling & run bot -----
-setup_error_handling(bot)
-bot.run(DISCORD_TOKEN)
+async def main():
+    # Setup error handling, load cogs, and run the bot
+    setup_error_handling(bot)
+    await load_cogs()
+    await bot.start(DISCORD_TOKEN)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        print(f"Error: {e}")

@@ -147,5 +147,5 @@ class General(commands.Cog):
 
 async def setup(bot):
     cog = General(bot)
-    await cog.fetch_command_ids()  # Fetch IDs before adding the cog
     await bot.add_cog(cog)
+    # Fetch command IDs in the on_ready event instead of here

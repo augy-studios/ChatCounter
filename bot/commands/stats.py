@@ -16,8 +16,10 @@ import discord
 import psutil
 from discord.ext import commands
 from discord import app_commands
+
 from core.logger import log_action
 from main import stats
+from shared import stats, max_id, words_stats, max_word_id
 
 class Stats(commands.Cog):
     def __init__(self, bot):
