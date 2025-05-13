@@ -115,21 +115,33 @@ def save_words():
 def generate_word_id():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
-# ----- Bot setup -----
-intents = discord.Intents.default()
-intents.message_content = True
-intents.guilds = True
-intents.members = True
-bot = commands.AutoShardedBot(
-    command_prefix="!",
-    intents=intents,
-    application_id=int(DISCORD_CLIENT_ID)
-)
-
 # Clean a token: strip leading punctuation/symbols and lower
 def clean_token(token: str) -> str:
     # Remove leading and trailing punctuation/symbols and convert to lowercase
     return token.strip(string.punctuation + '“”‘’').lower()
+
+# ----- Sharding configuration -----
+SHARD_COUNT = int(os.getenv('SHARD_COUNT', '1'))
+shards_env = os.getenv('SHARD_IDS', '')
+if shards_env:
+    SHARD_IDS = [int(s) for s in shards_env.split(',')]
+else:
+    # default to all shards if more than one, or [0] for single shard
+    SHARD_IDS = list(range(SHARD_COUNT)) if SHARD_COUNT > 1 else [0]
+
+# ----- Bot setup with manual shards -----
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(
+    command_prefix='!',
+    intents=intents,
+    application_id=int(DISCORD_CLIENT_ID),
+    shard_count=SHARD_COUNT,
+    shard_ids=SHARD_IDS
+)
 
 # ----- Event: track every user message and words -----
 @bot.event
