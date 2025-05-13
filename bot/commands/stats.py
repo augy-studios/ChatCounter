@@ -1,19 +1,15 @@
 import asyncio
-import time
 import datetime
+from zoneinfo import ZoneInfo
 import json
 import os
 import random
 import re
 import sys
 import csv
-from datetime import datetime
 
-import lxml
-import requests
 from config import BOT_OWNER_ID, LOG_GUILD_ID
 import discord
-import psutil
 from discord.ext import commands
 from discord import app_commands
 
@@ -27,6 +23,8 @@ class Stats(commands.Cog):
 
     @app_commands.command(name="leaderboard", description="Show the global message leaderboard")
     async def leaderboard(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+
         # Ensure there's data to show
         if not stats:
             await interaction.response.send_message("No message data yet.")
@@ -51,8 +49,8 @@ class Stats(commands.Cog):
         embed = discord.Embed(
             title="🏆 Global Message Leaderboard",
             description="Top 10 users by message count",
-            color=discord.Color.blurple(),
-            timestamp=datetime.datetime.utcnow()
+            color=discord.Color.random(),
+            timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
         )
         for rank, (uid, tot) in enumerate(top, start=1):
             member = self.bot.get_user(int(uid))
@@ -67,7 +65,7 @@ class Stats(commands.Cog):
                 inline=False
             )
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
         await log_action(self.bot, interaction)
 
 async def setup(bot):

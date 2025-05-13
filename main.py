@@ -2,9 +2,7 @@ import os
 import csv
 import string
 import datetime
-from zoneinfo import ZoneInfo
 import random
-import asyncio
 
 import discord
 from discord.ext import commands
@@ -281,14 +279,6 @@ async def on_guild_remove(guild):
     await update_activity()
 
 # ----- Error handling & run bot -----
-async def main():
-    # Setup error handling, load cogs, and run the bot
-    setup_error_handling(bot)
-    await load_cogs()
-    await bot.start(DISCORD_TOKEN)
-
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        print(f"Error: {e}")
+    setup_error_handling(bot)
+    bot.run(DISCORD_TOKEN)
