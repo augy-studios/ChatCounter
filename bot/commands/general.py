@@ -63,7 +63,7 @@ class General(commands.Cog):
         embed = discord.Embed(title="Hello!", color=discord.Color.random())
         link_to_add_bot = f"https://discord.com/oauth2/authorize?client_id={self.bot.user.id}"
         embed.add_field(name="Add Me to Your Server", value=f"[Click here!]({link_to_add_bot})")
-        link_to_hello = "https://discord.gg/H4YYsgkYSa/"
+        link_to_hello = "https://discord.gg/H4YYsgkYSa"
         embed.add_field(name="Bot Support", value=f"[Got questions? Join here!]({link_to_hello})")
         link_to_docs = "https://chatcounter.augystudios.com/"
         embed.add_field(name="How to Use", value=f"[View the documentation!]({link_to_docs})")
