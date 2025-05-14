@@ -230,8 +230,8 @@ async def load_cogs():
     extensions = [
         "bot.commands.general",
         "bot.commands.info",
-        "bot.commands.admin",
         "bot.commands.stats",
+        "bot.commands.admin",
     ]
     for ext in extensions:
         if ext not in bot.extensions:
