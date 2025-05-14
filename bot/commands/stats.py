@@ -34,8 +34,72 @@ class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ===== Leaderboard Commands =====
+    # ===== Server Stats Command =====
+    @app_commands.command(
+        name="serverstats",
+        description="Show an at-a-glance summary of server stats"
+    )
+    async def serverstats(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+        guild = interaction.guild
+        if not guild:
+            await interaction.followup.send("This command must be used in a guild.")
+            return
 
+        gid_str = str(guild.id)
+        # Total word count in this guild
+        total_words = 0
+        word_counts: dict[str, int] = {}
+        dict_counts: dict[str, int] = {}
+        non_dict_counts: dict[str, int] = {}
+
+        for rec in words_stats.values():
+            if rec.get('guild_id') != gid_str:
+                continue
+            word = rec['word']
+            count = rec['count']
+            total_words += count
+            # aggregate overall
+            word_counts[word] = word_counts.get(word, 0) + count
+            # aggregate by dict flag
+            if rec.get('is_dict'):
+                dict_counts[word] = dict_counts.get(word, 0) + count
+            else:
+                non_dict_counts[word] = non_dict_counts.get(word, 0) + count
+
+        # Determine most-used words
+        most_used_word = max(word_counts.items(), key=lambda kv: kv[1])[0] if word_counts else None
+        most_dict_word = max(dict_counts.items(), key=lambda kv: kv[1])[0] if dict_counts else None
+        most_non_dict_word = max(non_dict_counts.items(), key=lambda kv: kv[1])[0] if non_dict_counts else None
+
+        # Most chatty member (by message count)
+        chatty_totals: dict[str, int] = {}
+        for (uid, gid), rec in stats.items():
+            if gid != gid_str:
+                continue
+            chatty_totals[uid] = chatty_totals.get(uid, 0) + rec.get('messages', 0)
+        if chatty_totals:
+            top_uid, _ = max(chatty_totals.items(), key=lambda kv: kv[1])
+            member = self.bot.get_user(int(top_uid))
+            most_chatty = member.name if member else f"Unknown User ({top_uid})"
+        else:
+            most_chatty = None
+
+        embed = discord.Embed(
+            title=f"📊 Server Stats: {guild.name}",
+            color=discord.Color.random(),
+            timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
+        )
+        embed.add_field(name="Total Words", value=str(total_words), inline=False)
+        embed.add_field(name="Most Used Word", value=most_used_word or "N/A", inline=False)
+        embed.add_field(name="Most Used Dictionary Word", value=most_dict_word or "N/A", inline=False)
+        embed.add_field(name="Most Used Non-Dictionary Word", value=most_non_dict_word or "N/A", inline=False)
+        embed.add_field(name="Most Chatty Member", value=most_chatty or "N/A", inline=False)
+
+        await interaction.followup.send(embed=embed)
+        await log_action(self.bot, interaction)
+
+    # ===== Leaderboard Commands =====
     lb = app_commands.Group(
         name="lb",
         description="Leaderboard commands"
@@ -151,7 +215,6 @@ class Stats(commands.Cog):
         await log_action(self.bot, interaction)
 
     # ===== Top Words Commands =====
-
     topwords = app_commands.Group(
         name="topwords",
         description="Word usage commands"
@@ -270,7 +333,6 @@ class Stats(commands.Cog):
         await log_action(self.bot, interaction)
 
     # ===== Word Stats Commands =====
-
     wordstats = app_commands.Group(
         name="wordstats",
         description="Word statistics commands"
