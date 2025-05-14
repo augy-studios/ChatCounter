@@ -559,5 +559,77 @@ class Stats(commands.Cog):
         await interaction.followup.send(embed=embed)
         await log_action(self.bot, interaction)
 
+    # ===== Non-Dictionary Words Commands =====
+    nondict = app_commands.Group(
+        name="nondict",
+        description="Top non-dictionary words commands"
+    )
+
+    @nondict.command(
+        name="global",
+        description="Show the top 10 non-dictionary words used globally"
+    )
+    async def nondict_global(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+        totals: dict[str, int] = {}
+        for rec in words_stats.values():
+            if rec.get('is_dict'):
+                continue
+            word = rec['word']
+            count = rec['count']
+            totals[word] = totals.get(word, 0) + count
+        if not totals:
+            await interaction.followup.send("No non-dictionary word data yet.")
+            return
+        top = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:10]
+        embed = discord.Embed(
+            title="📝 Top 10 Non-Dictionary Words (Global)",
+            description="Most frequently used non-dictionary words across all guilds",
+            color=discord.Color.random(),
+            timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
+        )
+        for rank, (word, count) in enumerate(top, start=1):
+            embed.add_field(name=f"{rank}. {word}", value=f"{count} uses", inline=False)
+        await interaction.followup.send(embed=embed)
+        await log_action(self.bot, interaction)
+
+    @nondict.command(
+        name="guild",
+        description="Show the top 10 non-dictionary words in a guild"
+    )
+    @app_commands.describe(
+        guild_id="Guild ID to view, defaults to current guild"
+    )
+    async def nondict_guild(
+        self,
+        interaction: discord.Interaction,
+        guild_id: Optional[int] = None
+    ):
+        await interaction.response.defer(thinking=True)
+        gid = str(guild_id) if guild_id else str(interaction.guild_id)
+        totals: dict[str, int] = {}
+        for rec in words_stats.values():
+            if rec.get('guild_id') != gid or rec.get('is_dict'):
+                continue
+            word = rec['word']
+            count = rec['count']
+            totals[word] = totals.get(word, 0) + count
+        if not totals:
+            await interaction.followup.send("No non-dictionary word data for this guild.")
+            return
+        top = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:10]
+        guild_obj = self.bot.get_guild(int(gid)) if gid.isdigit() else None
+        guild_name = guild_obj.name if guild_obj else gid
+        embed = discord.Embed(
+            title=f"📝 Top 10 Non-Dictionary Words in {guild_name}",
+            description="Most frequently used non-dictionary words in this guild",
+            color=discord.Color.random(),
+            timestamp=datetime.datetime.now(ZoneInfo("Asia/Singapore"))
+        )
+        for rank, (word, count) in enumerate(top, start=1):
+            embed.add_field(name=f"{rank}. {word}", value=f"{count} uses", inline=False)
+        await interaction.followup.send(embed=embed)
+        await log_action(self.bot, interaction)
+
 async def setup(bot):
     await bot.add_cog(Stats(bot))
