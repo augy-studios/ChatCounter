@@ -1,7 +1,7 @@
 # Chat Counter Discord Bot
 Track messages, words, and characters across Discord and compete on a global leaderboard.
 
-Chat Counter is a Python rewrite of [WordCount](https://github.com/billsboard/WordCount) written in Java by [billsboard](https://github.com/billsboard), but with a twist to it.
+Countr (Chat Counter) is a Python rewrite of [WordCount](https://github.com/billsboard/WordCount) written in Java by [billsboard](https://github.com/billsboard), but with a twist to it.
 
 - 📘 [Documentation](https://chatcounter.augystudios.com/)
 - 💬 [Support Server](https://discord.gg/H4YYsgkYSa)
