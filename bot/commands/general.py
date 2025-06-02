@@ -67,6 +67,12 @@ class General(commands.Cog):
         embed.add_field(name="Bot Support", value=f"[Got questions? Join here!]({link_to_hello})")
         link_to_docs = "https://chatcounter.augystudios.com/"
         embed.add_field(name="How to Use", value=f"[View the documentation!]({link_to_docs})")
+        link_to_status = "https://pages.statusbot.us/id/873989298507120690"
+        embed.add_field(name="Bot Status", value=f"[Check the bot's status here!]({link_to_status})")
+        link_to_coffee = "https://donate.stripe.com/28o2akeAr3hv0DK6oo"
+        embed.add_field(name="Support the Bot", value=f"[Buy me a coffee!]({link_to_coffee})")
+        link_to_monthly_support = "https://donate.stripe.com/6oEbKUdwn9FTgCI7st"
+        embed.add_field(name="Monthly Support", value=f"[Support us monthly!]({link_to_monthly_support})")
         embed.set_footer(text="Made with ❤️ by Augy Studios © 2025 All Rights Sniffed • https://augystudios.com/")
         await interaction.response.send_message(embed=embed)
         await log_action(self.bot, interaction)
